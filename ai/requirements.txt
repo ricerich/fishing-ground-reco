@@ -1,0 +1,15 @@
+# 어장 추천 AI 서버 · 작업 프로세스 — Python 3.12 이상 (강사 PC 3.13 에서 확인)
+APScheduler==3.11.3
+fastapi==0.165.0
+httpx==0.28.1
+joblib==1.6.0
+numpy==2.5.5
+pandas==3.1.1
+pydantic-settings==2.16.3
+PyMySQL==1.2.4
+pytest==9.2.0
+python-dotenv==1.2.4
+requests==2.34.2
+scikit-learn==1.9.1
+SQLAlchemy==2.1.9
+uvicorn==0.54.0

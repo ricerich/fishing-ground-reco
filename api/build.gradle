@@ -1,0 +1,51 @@
+// 어장 추천 서비스 백엔드 — Spring Boot 4.1.3 · Java 21
+// 설정은 이 파일과 src/main/resources/application.properties 두 곳뿐 (yml 미사용)
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.1.3'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.ricerich'
+version = '1.0.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'                  // REST API
+    implementation 'org.springframework.boot:spring-boot-starter-validation'              // 요청 검사 (@Valid)
+    implementation 'org.springframework.boot:spring-boot-starter-security'                // 세션 · 권한 · CSRF
+    implementation 'org.springframework.boot:spring-boot-starter-security-oauth2-client'  // 카카오 · 네이버 · 구글
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'                // app 스키마 (회원 · 피드백 …)
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'                    // reco 뷰 읽기 (JdbcClient)
+    implementation 'org.springframework.boot:spring-boot-starter-flyway'                  // app 스키마 변경 이력
+    implementation 'org.flywaydb:flyway-mysql'                                            // Flyway 의 MariaDB 지원
+    implementation 'org.springframework.boot:spring-boot-starter-mail'                    // 인증 · 재설정 메일
+    implementation 'org.springframework.boot:spring-boot-starter-restclient'              // FastAPI 호출 (RestClient)
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'                // /actuator/health
+    runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'com.h2database:h2'                                                   // 저장소 테스트용 메모리 DB
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// 컴파일 경고를 한국어 주석과 함께 보기 좋게
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-parameters'
+}

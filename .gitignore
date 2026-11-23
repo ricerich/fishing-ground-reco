@@ -1,0 +1,30 @@
+# 비밀 값 — 절대 올리지 않는다
+.env
+*.env.local
+
+# 파이썬
+ai/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+ai/data/
+ai/out/
+ai/models/registry/*
+!ai/models/registry/.gitkeep
+ai/rag_index/
+
+# Spring
+api/build/
+api/.gradle/
+api/bin/
+
+# Next.js
+web/node_modules/
+web/.next/
+web/test-results/
+web/tsconfig.tsbuildinfo
+
+# 캡처 작업 폴더 (최종본은 docs/captures 에)
+scripts/capture/out/
+.DS_Store
+Thumbs.db
