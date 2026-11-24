@@ -12,6 +12,7 @@ const TABS = [
   { href: "/admin/models", label: "모델 · 교체" },
   { href: "/admin/collect", label: "수집" },
   { href: "/admin/jobs", label: "작업 기록" },
+  { href: "/admin/usage", label: "이용 기록" },
 ];
 
 export function AdminShell({ title, lead, children }: { title: string; lead?: string; children: React.ReactNode }) {

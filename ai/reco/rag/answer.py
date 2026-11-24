@@ -118,8 +118,8 @@ def _extract(question, hits):
     """mock: 검색 1 · 2위 청크에서 질문 낱말이 많이 겹치는 문장 두 개를 골라 번호를 붙인다 (생성하지 않음)"""
     if not hits:
         return UNKNOWN
-    from .search import tokens
-    q = set(tokens(question)) - WEAK
+    from .search import expand, tokens
+    q = set(tokens(expand(question))) - WEAK                   # 현장 말 → 문서 말 확장까지 ('잘 잡' → 좋은 날)
     cands = []
     for h in hits[:2]:
         for s in re.split(r"(?<=[.?!])\s+|\n+", h["text"]):

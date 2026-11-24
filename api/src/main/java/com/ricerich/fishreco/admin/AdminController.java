@@ -135,6 +135,14 @@ public class AdminController {
         return q;
     }
 
+    /** 이용 기록 — 물어보기 · 근거 설명의 답 품질과 추천 피드백 */
+    @GetMapping("/usage")
+    public Map<String, Object> usage(@RequestParam(defaultValue = "30") int days, @RequestParam(defaultValue = "false") boolean problemsOnly) {
+        int d = Math.max(1, Math.min(days, 365));
+        return Map.of("days", d, "ragStats", repo.ragStats(d), "ragLog", repo.ragLog(15, problemsOnly),
+                "feedbackStats", repo.feedbackStats(d), "comments", repo.feedbackComments(20), "audit", repo.audits(20));
+    }
+
     @GetMapping("/audit")
     public List<Map<String, Object>> audit(@RequestParam(defaultValue = "30") int limit) {
         return repo.audits(Math.min(limit, 200));

@@ -15,6 +15,7 @@
   --color-gale: #f2c230;
   --color-gale-soft: #fdf3cf;
   --color-line: #c5d5d8;
+  --color-rule: #1679a8;      /* 차트: 규칙(어제 좋았던 곳) — 부표 주황과 색각 이상에서도 구별됨 (dataviz 검사 통과) */
   --font-sans: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
 }
 

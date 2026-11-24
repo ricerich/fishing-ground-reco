@@ -28,6 +28,7 @@ const SCENES = {
   2: phase2,
   3: phase3,
   4: phase4,
+  5: phase5,
   0: [
     ["01", "status", "시스템 상태 — 네 부분이 모두 정상", (p) => open(p, `${WEB}/status`), false, false],
     ["02", "status-raw", "GET /api/health 응답 원문", async (p) => { await open(p, `${WEB}/status`); await p.click("summary"); await wait(p); }, false, true],
@@ -313,6 +314,38 @@ async function phase4(browser, shot) {
   await p.evaluate(() => window.scrollTo(0, document.body.scrollHeight)); await wait(p);
   await shot(p, "08", "ask-limit", "질문 제한 — 1분에 5번 (Spring 이 429)");
   await ctx.close();
+}
+
+// 5단계: 추천 성적 · 피드백 · 이용 기록
+async function phase5(browser, shot) {
+  const ctx = await browser.newContext(PC);
+  const p = await ctx.newPage();
+  await open(p, `${WEB}/record?species=방어&weeks=8`);
+  await shot(p, "01", "record", "추천 성적 — 보여 드린 추천 · 규칙 · 무작위, 주별 그림, 날마다 맞은 권역", {
+    full: true, mobile: (m) => open(m, `${WEB}/record?species=방어&weeks=8`),
+  });
+  const svg = p.locator("figure svg").first();
+  const box = await svg.boundingBox();
+  await p.mouse.move(box.x + box.width * 0.42, box.y + box.height * 0.5); await wait(p, 400);
+  await svg.scrollIntoViewIfNeeded();
+  await shot(p, "02", "record-hover", "주별 그림에 마우스를 올리면 그 주의 세 값");
+  await open(p, `${WEB}/record?species=고등어&weeks=26`);
+  await shot(p, "03", "record-mackerel-26w", "고등어 · 최근 26주", { full: true });
+
+  await open(p, `${WEB}/login`); await p.click("text=시연 사용자"); await p.waitForURL(`${WEB}/`);
+  await open(p, `${WEB}/?species=방어&date=2026-10-15`);
+  const g = p.locator("[role=group][aria-label$='추천 평가']");
+  await g.nth(0).locator("button", { hasText: "도움이 됐어요" }).click();
+  await g.nth(2).locator("button", { hasText: "아니에요" }).click(); await wait(p);
+  await shot(p, "04", "feedback", "회원은 Top-3 마다 ‘도움이 됐어요 / 아니에요’ — 그때 서비스한 모델 버전과 함께 저장");
+  await ctx.close();
+
+  const ad = await browser.newContext(PC);
+  const a = await ad.newPage();
+  await open(a, `${WEB}/login`); await a.click("text=시연 관리자"); await a.waitForURL(`${WEB}/`);
+  await open(a, `${WEB}/admin/usage`);
+  await shot(a, "05", "usage", "관리자 · 이용 기록 — 답 품질(인용 · 숫자 · 모름) · 질문과 답 · 추천 피드백 · 관리자 행동", { full: true });
+  await ad.close();
 }
 
 const only = process.argv[2] ?? "all";

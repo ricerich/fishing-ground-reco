@@ -9,6 +9,7 @@ import { CoastChart } from "@/components/CoastChart";
 import { RankList } from "@/components/RankList";
 import { useAuth } from "@/lib/auth";
 import { ExplainPanel } from "@/components/rag/ExplainPanel";
+import { FeedbackButtons, type FeedbackMap } from "@/components/FeedbackButtons";
 
 const SPECIES: Species[] = ["고등어", "방어", "삼치"];
 
@@ -78,6 +79,7 @@ function Home() {
   const [err, setErr] = useState<string | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
   const [explain, setExplain] = useState<Item | null>(null);
+  const [fb, setFb] = useState<FeedbackMap>({});
   const { me } = useAuth();
   const fav = me?.favoriteSpecies.find((s) => SPECIES.includes(s as Species)) as Species | undefined;
   const species = (SPECIES.includes(sp.get("species") as Species) ? sp.get("species") : fav ?? "방어") as Species;
@@ -96,6 +98,12 @@ function Home() {
     api<Recommendation>(`/api/recommendations?species=${encodeURIComponent(species)}&date=${date}`)
       .then(setRec).catch((e: ApiError) => setErr(e.message));
   }, [species, date]);
+
+  useEffect(() => {
+    if (!me || !date) { setFb({}); return; }
+    api<{ area: string; helpful: boolean }[]>(`/api/feedback?date=${date}&species=${encodeURIComponent(species)}`)
+      .then((rows) => setFb(Object.fromEntries(rows.map((r) => [r.area, r.helpful])))).catch(() => setFb({}));
+  }, [me, species, date]);
 
   const change = useCallback((s: Species, d: string) => {
     router.replace(`/?species=${encodeURIComponent(s)}&date=${d}`, { scroll: false });
@@ -124,7 +132,9 @@ function Home() {
           </div>
           <div className="space-y-5">
             <RankList items={rec.items} picked={picked} onPick={setPicked} favorites={me?.favoriteAreas}
-              onExplain={(it) => { setExplain(it); setPicked(it.area); }} />
+              onExplain={(it) => { setExplain(it); setPicked(it.area); }}
+              actions={me ? (it) => <FeedbackButtons date={date} species={species} area={it.area} value={fb[it.area]}
+                onChange={(a, v) => setFb((m) => ({ ...m, [a]: v }))} /> : undefined} />
             {explain && <ExplainPanel species={species} date={date} area={explain.area} rank={explain.rank} onClose={() => setExplain(null)} />}
             <ModelNote rec={rec} />
             {rec.others.length > 0 && (

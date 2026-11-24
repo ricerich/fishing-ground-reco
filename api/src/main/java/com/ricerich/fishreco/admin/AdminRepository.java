@@ -125,6 +125,42 @@ public class AdminRepository {
                 .update();
     }
 
+    /** 물어보기 · 근거 설명 품질 — 최근 N일, LLM 별 */
+    public List<Map<String, Object>> ragStats(int days) {
+        return jdbc.sql("""
+                SELECT llm, mode, COUNT(*) AS n, AVG(cite_ok) AS cite_ok_rate, AVG(numbers_ok) AS numbers_ok_rate,
+                       AVG(said_unknown) AS unknown_rate, SUM(helpful = 1) AS helpful_yes, SUM(helpful = 0) AS helpful_no,
+                       AVG(seconds) AS avg_seconds
+                FROM rag_qa_log WHERE created_at >= NOW() - INTERVAL ? DAY GROUP BY llm, mode ORDER BY n DESC""")
+                .param(days).query(rows()).list();
+    }
+
+    public List<Map<String, Object>> ragLog(int limit, boolean problemsOnly) {
+        return jdbc.sql("""
+                SELECT q.qa_id, q.created_at, q.mode, q.species, q.rec_date, q.question, q.answer, q.cite_ok, q.numbers_ok,
+                       q.said_unknown, q.made_up, q.llm, q.seconds, q.helpful, u.display_name AS who
+                FROM rag_qa_log q LEFT JOIN users u ON u.user_id = q.user_id"""
+                + (problemsOnly ? " WHERE q.helpful = 0 OR q.numbers_ok = 0 OR q.made_up > 0" : "")
+                + " ORDER BY q.qa_id DESC LIMIT ?").param(limit).query(rows()).list();
+    }
+
+    /** 추천 피드백 — 모델(서비스하던 버전)별 · 품목별 */
+    public List<Map<String, Object>> feedbackStats(int days) {
+        return jdbc.sql("""
+                SELECT model_version, species, COUNT(*) AS n, SUM(helpful) AS helpful_yes, SUM(NOT helpful) AS helpful_no
+                FROM rec_feedback WHERE created_at >= NOW() - INTERVAL ? DAY
+                GROUP BY model_version, species ORDER BY model_version, species""")
+                .param(days).query(rows()).list();
+    }
+
+    public List<Map<String, Object>> feedbackComments(int limit) {
+        return jdbc.sql("""
+                SELECT f.rec_date, f.species, f.area_name, f.model_version, f.helpful, f.comment, f.created_at, u.display_name AS who
+                FROM rec_feedback f LEFT JOIN users u ON u.user_id = f.user_id
+                WHERE f.comment IS NOT NULL ORDER BY f.feedback_id DESC LIMIT ?""")
+                .param(limit).query(rows()).list();
+    }
+
     public List<Map<String, Object>> audits(int limit) {
         return jdbc.sql("""
                 SELECT a.audit_id, a.action, a.target, a.detail, a.created_at, u.display_name AS who
