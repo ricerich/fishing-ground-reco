@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 네 프로세스를 한 번에 띄운다 (리눅스 · 맥). Windows 는 start_all.ps1
+# 네 프로세스를 한 번에 띄운다 (리눅스 · 맥). Windows 는 scripts\setup.ps1 · start.ps1 · stop.ps1
 # 먼저 한 번: ai/.venv 만들기 · npm install · .env 채우기 · python ai/scripts/init_db.py · python -m reco.jobs run bootstrap_demo
 # 실습 기본 프로필: demo(시연 날짜 · 시연 로그인) + mockoauth(모의 카카오 · 네이버). 실제 키로 돌릴 때: PROFILES=demo scripts/start_all.sh
 PROFILES="${PROFILES:-demo,mockoauth}"

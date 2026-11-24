@@ -13,5 +13,5 @@ requests==2.34.2
 scikit-learn==1.9.1
 SQLAlchemy==2.1.9
 uvicorn==0.54.0
-kiwipiepy==0.21.0          # RAG: 한국어 형态소(BM25 낱말 자르기)
+kiwipiepy==0.21.0          # RAG: 한국어 형태소(BM25 낱말 자르기)
 rank-bm25==0.2.2

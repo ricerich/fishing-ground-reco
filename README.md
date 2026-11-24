@@ -42,7 +42,26 @@ AI·데이터 기반 해양·수산 서비스 개발자 과정 **U3-P 프로젝�
 각 안내 문서 끝에 그 단계에서 실제로 만난 문제와 고친 방법을 적었다 (h2c 업그레이드로 사라진 POST 본문,
 한 번에 몰려오던 스트림, 거절된 소셜 연결 뒤의 세션 주인 등).
 
-## 처음 설치 (한 번)
+## Windows — 세 줄로
+
+특정 폴더에서 PowerShell 을 열고:
+
+```powershell
+git clone https://github.com/ricerich/fishing-ground-reco.git; cd fishing-ground-reco
+powershell -ExecutionPolicy Bypass -File scripts\setup.ps1     # 설치 — 처음 한 번 (MariaDB root 비밀번호를 물어봄)
+powershell -ExecutionPolicy Bypass -File scripts\start.ps1     # 구동 — 수업마다. 다 뜨면 브라우저가 열림
+powershell -ExecutionPolicy Bypass -File scripts\stop.ps1      # 끄기
+```
+
+| 스크립트 | 하는 일 |
+|---|---|
+| `setup.ps1` | ① 필수 프로그램 확인(Git · Python 3.12+ · Java 21+ · Node.js 20.9+ · MariaDB — 없으면 winget 명령을 알려 주고 멈춤) ② `.env` ③ AI 서버(+RAG) 가상환경 · 패키지 ④ DB · 계정(`setup_db`) ⑤ 시연 자료 · 첫 모델 ⑥ `npm ci` ⑦ Gradle 컴파일 ⑧ Mailpit 받기(`tools\mailpit`) ⑨ Ollama 가 있으면 `qwen3:1.7b` 받기. 다시 돌려도 안전, 특정 단계만: `-Only 3,6` · 건너뛰기: `-SkipDb` `-SkipMailpit` `-SkipOllama` |
+| `start.ps1` | 개발 모드로 각 서버를 제목 붙은 새 창에: Mailpit · 모의 소셜(:9100) · AI 서버 `uvicorn --reload`(:8000) · 작업 프로세스 · Spring `gradlew bootRun`(:8080) · 화면 `npm run dev`(:3000). 세 서버가 ‘정상’이 될 때까지 기다린 뒤 /status 를 연다. 실제 소셜 키로: `-Profiles demo` |
+| `stop.ps1` | start 가 띄운 창과 그 안의 서버를 모두 닫는다 (남은 포트 · 작업 프로세스까지) |
+
+RAG 는 별도 서버가 아니라 AI 서버(FastAPI) 안에 있다. LLM 은 Ollama(따로 설치)를 부르고, 없으면 근거 문장 모음으로 답한다.
+
+## 처음 설치 (한 번) — 단계별로 직접 하려면
 
 1. MariaDB 10.11 이상, Java 21, Node.js 20.9 이상, Python 3.12 이상, 개발용 메일함 [Mailpit](https://mailpit.axllent.org) 을 설치한다.
    RAG 를 LLM 으로 돌리려면 [Ollama](https://ollama.com) 를 설치하고 `ollama pull qwen3:1.7b`.
@@ -73,7 +92,7 @@ AI·데이터 기반 해양·수산 서비스 개발자 과정 **U3-P 프로젝�
 ## 실행
 
 ```bash
-scripts/start_all.sh            # Windows: powershell -ExecutionPolicy Bypass -File scripts\start_all.ps1
+scripts/start_all.sh            # 리눅스 · 맥. Windows 는 위의 scripts\start.ps1
 ```
 
 AI 서버 · 작업 프로세스 · Spring · 화면 · (있으면) Mailpit · 모의 소셜 로그인 서버가 뜬다.

@@ -28,3 +28,7 @@ web/tsconfig.tsbuildinfo
 scripts/capture/out/
 .DS_Store
 Thumbs.db
+
+# Windows 스크립트가 받는 도구 · 띄운 창 번호
+tools/
+scripts/.pids
