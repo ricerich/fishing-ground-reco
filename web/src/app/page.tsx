@@ -7,6 +7,7 @@ import type { Area, Item, Meta, Recommendation, Species } from "@/lib/types";
 import { addDays, dayLabel, fillNote, modelName, pct, weight } from "@/lib/format";
 import { CoastChart } from "@/components/CoastChart";
 import { RankList } from "@/components/RankList";
+import { useAuth } from "@/lib/auth";
 
 const SPECIES: Species[] = ["고등어", "방어", "삼치"];
 
@@ -75,7 +76,9 @@ function Home() {
   const [rec, setRec] = useState<Recommendation | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
-  const species = (SPECIES.includes(sp.get("species") as Species) ? sp.get("species") : "방어") as Species;
+  const { me } = useAuth();
+  const fav = me?.favoriteSpecies.find((s) => SPECIES.includes(s as Species)) as Species | undefined;
+  const species = (SPECIES.includes(sp.get("species") as Species) ? sp.get("species") : fav ?? "방어") as Species;
   const date = sp.get("date") ?? meta?.today ?? "";
 
   useEffect(() => {
@@ -117,7 +120,7 @@ function Home() {
             <CoastChart areas={areas} items={all} excluded={rec.excluded.map((e) => e.area)} picked={picked} onPick={setPicked} />
           </div>
           <div className="space-y-5">
-            <RankList items={rec.items} picked={picked} onPick={setPicked} />
+            <RankList items={rec.items} picked={picked} onPick={setPicked} favorites={me?.favoriteAreas} />
             <ModelNote rec={rec} />
             {rec.others.length > 0 && (
               <details className="rounded-lg border border-line bg-white p-4">

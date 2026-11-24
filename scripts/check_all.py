@@ -113,11 +113,29 @@ def protected():
     return "로그인 없이 /api/me 401"
 
 
+# ── 2단계: 회원 ─────────────────────────────────────────────────────
+def auth_flow():
+    """가입 → 메일 → 인증 → 로그인 → 재설정 → 잠금 → 관리자 → (모의) 소셜 연결 — scripts/check_auth.py 를 그대로 돌린다"""
+    import subprocess
+    r = subprocess.run([sys.executable, str(Path(__file__).with_name("check_auth.py"))], capture_output=True, text=True, timeout=120)
+    last = (r.stdout.strip().splitlines() or ["출력 없음"])[-1]
+    fails = [l for l in r.stdout.splitlines() if l.startswith("FAIL")]
+    expect(r.returncode == 0, "; ".join(fails)[:150] or r.stderr[-150:])
+    return last
+
+
+def admin_guard():
+    r = requests.get(f"{API}/api/admin/ping", timeout=10)
+    expect(r.status_code == 401, r.status_code)
+    return "로그인 없이 /api/admin 401 (회원은 403 — check_auth)"
+
+
 CHECKS = [
     ("AI 서버 health", ai_health), ("AI 내부 API 는 토큰 필요", ai_token_required), ("Spring health (DB · 뷰 · AI)", api_health),
     ("화면 → Spring 주소 넘김", web_proxy),
     ("오늘 추천 (방어 Top-3)", reco_today), ("추천 응답 속도", reco_fast), ("추천 오류 처리", reco_errors),
     ("미리 계산 = 즉석 계산", reco_same_as_ai), ("보호된 경로", protected),
+    ("관리자 경로", admin_guard), ("회원 흐름 (메일 · 소셜 포함)", auth_flow),
 ]
 
 if __name__ == "__main__":

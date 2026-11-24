@@ -24,7 +24,7 @@ PRD(요구사항 정의)는 별도 문서로 관리한다. 숫자의 출발점�
 
 ## 처음 설치 (한 번)
 
-1. MariaDB 10.11 이상, Java 21, Node.js 20.9 이상, Python 3.12 이상을 설치한다.
+1. MariaDB 10.11 이상, Java 21, Node.js 20.9 이상, Python 3.12 이상, 개발용 메일함 [Mailpit](https://mailpit.axllent.org) 을 설치한다.
 2. `.env.example` 을 `.env` 로 복사하고 비밀번호 · `INTERNAL_TOKEN` 을 채운다 (`.env` 는 올리지 않는다).
 3. AI 쪽
    ```bash
@@ -43,10 +43,13 @@ PRD(요구사항 정의)는 별도 문서로 관리한다. 숫자의 출발점�
 scripts/start_all.sh                                    # Windows: powershell -ExecutionPolicy Bypass -File scripts\start_all.ps1
 ```
 
+기본 프로필은 `demo,mockoauth` — 시연 로그인과 모의 카카오 · 네이버(:9100)로 키 없이 회원 기능을 모두 돌려 볼 수 있다.
+메일은 http://localhost:8025 (Mailpit). 실제 소셜 키로 바꾸는 법은 [2단계 안내](docs/guide/02_회원.md#실제-키로-바꾸기).
+
 http://localhost:3000/status 에서 네 부분이 모두 ‘정상’인지 본 뒤, 통합 점검을 돌린다.
 
 ```bash
-ai/.venv/bin/python scripts/check_all.py               # 항목별 OK / FAIL
+ai/.venv/bin/python scripts/check_all.py               # 항목별 OK / FAIL (회원 흐름 34개 포함)
 ```
 
 ## 시연 모드
@@ -67,7 +70,7 @@ node scripts/capture/capture.mjs all                   # docs/captures/phase<N>/
 |---|---|---|
 | 0 | 저장소 · DB · 네 프로세스 health · 실행 스크립트 | 완료 |
 | 1 | 추천 미리 계산 · Spring 추천 API · 해도 화면 | 완료 |
-| 2 | 회원: 이메일 인증 · 재설정 · 카카오 · 네이버 · 구글 · 계정 연결 · 관리자 | |
+| 2 | 회원: 이메일 인증 · 재설정 · 카카오 · 네이버 · 구글 · 계정 연결 · 관리자 — [안내](docs/guide/02_회원.md) | 완료 |
 | 3 | 수집 · 재학습 · 자동 교체 · 관리자 화면 | |
 | 4 | RAG: 추천 근거 설명 · 규정 채팅 | |
 | 5 | 추천 성적 · 피드백 · E2E · 통합 점검 | |

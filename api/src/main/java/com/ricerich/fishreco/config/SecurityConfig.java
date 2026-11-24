@@ -1,5 +1,8 @@
 package com.ricerich.fishreco.config;
 
+import com.ricerich.fishreco.auth.OAuthHandlers;
+import com.ricerich.fishreco.auth.SessionVersionFilter;
+import com.ricerich.fishreco.user.Repositories.UserRepo;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,8 +13,12 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
@@ -19,25 +26,39 @@ import org.springframework.security.web.authentication.www.BasicAuthenticationFi
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * 1단계: 공개 조회만 연다. 회원 · 소셜 로그인 규칙은 2단계에서 이 파일에 더한다.
+ * 보안 규칙 한곳 모음
  * - 세션 쿠키(HttpOnly) + CSRF 쿠키(XSRF-TOKEN, 화면이 읽어 X-XSRF-TOKEN 헤더로 돌려보냄)
- * - 로그인 안 한 /api 요청은 화면 이동(302) 대신 401
+ * - 공개: 추천 조회 · 회원 가입/로그인 · 소셜 로그인 경로 / 관리자: /api/admin/** 은 ADMIN 만
+ * - 로그인 안 한 /api 요청은 화면 이동(302) 대신 401, 권한 부족은 403
+ * - 소셜 로그인 성공 · 실패는 OAuthHandlers 가 우리 회원으로 바꿔 처리
  */
 @Configuration
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain api(HttpSecurity http) throws Exception {
+    PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(12);
+    }
+
+    @Bean
+    SecurityFilterChain api(HttpSecurity http, OAuthHandlers oauth, UserRepo users) throws Exception {
         var csrfHandler = new CsrfTokenRequestAttributeHandler();
         csrfHandler.setCsrfRequestAttributeName(null);           // 매 요청 토큰을 바로 읽게 (쿠키가 늘 있도록)
         http
             .csrf(c -> c.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()).csrfTokenRequestHandler(csrfHandler))
             .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
+            .addFilterAfter(new SessionVersionFilter(users), SecurityContextHolderFilter.class)
             .authorizeHttpRequests(a -> a
                 .requestMatchers("/api/health", "/actuator/health", "/error").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/meta", "/api/species", "/api/areas", "/api/recommendations",
                                  "/api/recommendations/history").permitAll()
+                .requestMatchers("/api/auth/**", "/oauth2/**", "/login/oauth2/**").permitAll()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated())
+            .oauth2Login(o -> o.successHandler(oauth).failureHandler(oauth))
+            .logout(l -> l.logoutUrl("/api/auth/logout")
+                .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler(HttpStatus.NO_CONTENT))
+                .deleteCookies("JSESSIONID"))
             .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
             .httpBasic(b -> b.disable())
             .formLogin(f -> f.disable());

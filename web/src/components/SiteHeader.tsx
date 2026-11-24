@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { Meta } from "@/lib/types";
 import { dayLabel } from "@/lib/format";
+import { useAuth } from "@/lib/auth";
 
 const NAV = [
   { href: "/", label: "오늘의 추천" },
@@ -14,6 +15,7 @@ const NAV = [
 
 export function SiteHeader() {
   const path = usePathname();
+  const { me, ready, logout } = useAuth();
   const [meta, setMeta] = useState<Meta | null>(null);
   useEffect(() => {
     api<Meta>("/api/meta").then(setMeta).catch(() => setMeta(null));
@@ -33,11 +35,25 @@ export function SiteHeader() {
             </Link>
           ))}
         </nav>
-        {meta?.demo && (
-          <span className="ml-auto rounded border border-gale/60 px-2 py-0.5 text-xs text-gale" title="DEMO_TODAY 로 고정된 날짜">
-            시연 자료 · {dayLabel(meta.today)} 기준
-          </span>
-        )}
+        <div className="ml-auto flex items-center gap-3 text-sm">
+          {meta?.demo && (
+            <span className="rounded border border-gale/60 px-2 py-0.5 text-xs text-gale" title="DEMO_TODAY 로 고정된 날짜">
+              시연 자료 · {dayLabel(meta.today)} 기준
+            </span>
+          )}
+          {!ready ? null : me ? (
+            <>
+              {me.role === "ADMIN" && (
+                <Link href="/admin" className={`rounded px-2 py-1 ${path.startsWith("/admin") ? "bg-buoy font-semibold" : "text-paper/80 hover:text-paper"}`}>관리자</Link>
+              )}
+              <Link href="/me" className={`rounded px-2 py-1 ${path === "/me" ? "bg-paper/15 font-semibold" : "hover:text-paper"}`}>{me.name}님</Link>
+              <button type="button" onClick={() => logout()} className="text-paper/70 hover:text-paper">로그아웃</button>
+            </>
+          ) : (
+            <Link href={`/login${path !== "/" && path !== "/login" ? `?next=${encodeURIComponent(path)}` : ""}`}
+              className="rounded border border-paper/40 px-3 py-1 font-semibold hover:bg-paper/10">로그인</Link>
+          )}
+        </div>
       </div>
     </header>
   );

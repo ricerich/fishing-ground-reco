@@ -107,3 +107,12 @@ export interface Problem {
   code?: string;
   fields?: Record<string, string>;
 }
+
+// 회원 — api/.../auth/AuthDtos.java
+export interface Identity { provider: string; label: string; email: string | null; linkedAt: string }
+export interface Me {
+  id: number; name: string; email: string | null; emailVerified: boolean; role: "USER" | "ADMIN"; loginWith: string;
+  hasPassword: boolean; identities: Identity[]; favoriteSpecies: string[]; favoriteAreas: string[]; createdAt: string;
+}
+export interface Providers { kakao: boolean; naver: boolean; google: boolean; demoLogin: boolean }
+export interface Message { message: string }

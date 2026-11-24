@@ -23,7 +23,8 @@ function Warnings({ it }: { it: Item }) {
   );
 }
 
-export function RankList({ items, onExplain, picked, onPick, actions }: {
+export function RankList({ items, onExplain, picked, onPick, actions, favorites = [] }: {
+  favorites?: string[];
   items: Item[];
   onExplain?: (it: Item) => void;
   picked?: string | null;
@@ -40,7 +41,7 @@ export function RankList({ items, onExplain, picked, onPick, actions }: {
           <span className="num grid size-12 shrink-0 place-items-center rounded-full bg-buoy text-2xl font-bold text-white">1</span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-              <h2 className="text-2xl font-bold tracking-tight">{first.area}</h2>
+              <h2 className="text-2xl font-bold tracking-tight">{first.area}{favorites.includes(first.area) && <span className="ml-2 align-middle rounded-full border border-depth px-2 py-0.5 text-xs font-semibold text-depth">관심 권역</span>}</h2>
               <span className="num text-sm text-ink-2" title="권역끼리 순서를 정하는 값 — 확률로 읽지 않는다">점수 {first.score.toFixed(2)}</span>
             </div>
             <Facts it={first} />
@@ -67,7 +68,7 @@ export function RankList({ items, onExplain, picked, onPick, actions }: {
             <span className="num grid size-9 shrink-0 place-items-center rounded-full border-2 border-buoy text-lg font-bold text-buoy">{it.rank}</span>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-                <h3 className="text-lg font-semibold">{it.area}</h3>
+                <h3 className="text-lg font-semibold">{it.area}{favorites.includes(it.area) && <span className="ml-2 align-middle rounded-full border border-depth px-2 py-0.5 text-xs font-semibold text-depth">관심 권역</span>}</h3>
                 <span className="num text-sm text-ink-2">점수 {it.score.toFixed(2)}</span>
               </div>
               <Facts it={it} />
