@@ -46,15 +46,26 @@ AI·데이터 기반 해양·수산 서비스 개발자 과정 **U3-P 프로젝�
 
 1. MariaDB 10.11 이상, Java 21, Node.js 20.9 이상, Python 3.12 이상, 개발용 메일함 [Mailpit](https://mailpit.axllent.org) 을 설치한다.
    RAG 를 LLM 으로 돌리려면 [Ollama](https://ollama.com) 를 설치하고 `ollama pull qwen3:1.7b`.
-2. `.env.example` 을 `.env` 로 복사하고 비밀번호 · `INTERNAL_TOKEN` · `ADMIN_EMAILS` 를 채운다. **`.env` 는 올리지 않는다.**
-3. AI 쪽
+2. `.env.example` 을 `.env` 로 복사하고 `ADMIN_EMAILS` 를 채운다. **`.env` 는 올리지 않는다.**
+3. AI 쪽 파이썬 환경, 그리고 **데이터베이스 · 계정 만들기** — MariaDB root 비밀번호만 넣으면 된다
    ```bash
    cd ai
    python -m venv .venv
    .venv/bin/pip install -r requirements.txt          # Windows: .venv\Scripts\pip
-   .venv/bin/python scripts/init_db.py                # 데이터베이스 reco · app, 계정 reco_ai · reco_api, 표 · 뷰 · 권한
-   .venv/bin/python -m reco.jobs run bootstrap_demo   # 시연 자료 → reco_v1 → 7/1~오늘 추천 → 채점 (약 15초)
+   cd ..
+   scripts/setup_db.sh                                # Windows: powershell -ExecutionPolicy Bypass -File scripts\setup_db.ps1
+   ai/.venv/bin/python -m reco.jobs run bootstrap_demo   # 시연 자료 → reco_v1 → 7/1~오늘 추천 → 채점 (약 15초)
    ```
+   `setup_db` 가 하는 일: root 접속 확인 → `.env` 의 `RECO_DB_PASSWORD` · `APP_DB_PASSWORD` · `INTERNAL_TOKEN` 이 비었으면
+   강한 값을 만들어 적음 → 데이터베이스 `reco` · `app` → 계정 `reco_ai`(reco 전체) · `reco_api`(app 전체 + reco 뷰 읽기만)
+   → reco 표 · 뷰 → 두 계정으로 접속해 권한 확인. root 비밀번호는 어디에도 저장하지 않는다. 몇 번 실행해도 안전하다.
+
+   | 선택지 | 언제 |
+   |---|---|
+   | `--socket /run/mysqld/mysqld.sock` | 리눅스에서 root 가 비밀번호 없이 소켓 인증일 때 (`sudo` 로 실행) |
+   | `--new-passwords` | 두 계정의 비밀번호를 새로 만들어 바꿀 때 (그 뒤 서버들을 다시 켠다) |
+   | `--users-only` | DB · 계정 · 권한만 (표 · 뷰는 나중에 `ai/scripts/init_db.py`) |
+   | `--dry-run` | 실행할 SQL 만 보기 (비밀번호는 가림) |
 4. 화면 쪽: `cd web && npm install`
 5. Spring 은 처음 실행할 때 Gradle 이 라이브러리를 받는다.
 6. (점검 · 캡처용) `npm i -g playwright && npx playwright install chromium`
