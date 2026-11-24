@@ -126,7 +126,7 @@ def bootstrap_demo(backfill_from="2026-07-01"):
     return bootstrap.run(backfill_from)
 
 
-@job("rag_reindex", "새 특보 · 문서를 RAG 색인에 더한다 (4단계)")
+@job("rag_reindex", "ai/rag_docs 를 다시 읽어 rag_doc 표 · AI 서버 색인을 다시 만든다")
 def rag_reindex():
     try:
         from .rag_index import reindex

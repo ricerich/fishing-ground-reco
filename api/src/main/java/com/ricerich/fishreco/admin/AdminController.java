@@ -26,6 +26,7 @@ public class AdminController {
         JOBS.put("precompute_today", "오늘 추천 다시 계산");
         JOBS.put("evaluate_live", "지난 추천 채점");
         JOBS.put("retrain_weekly", "재학습 → 교체 조건 5개 → 교체 또는 거절");
+        JOBS.put("rag_reindex", "RAG 문서를 다시 읽어 색인 다시 만들기 (ai/rag_docs 를 고친 뒤)");
     }
     static final Map<String, String> DEMO_JOBS = Map.of("demo_weak_champion", "시연 시나리오 — 약한 챔피언으로 바꿔 두기");
     private static final Set<String> FOLLOW = Set.of("queued", "running");
