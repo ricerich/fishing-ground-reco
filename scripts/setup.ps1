@@ -82,12 +82,32 @@ if (Step 1 '필수 프로그램 확인') {
     if ($nv -and $nv -ge [version]'20.9.0') { Ok "Node.js $nv" }
     else { $missing += @{ name = "Node.js 20.9 이상$(if ($nv) { " (지금 $nv)" })"; winget = 'winget install --id OpenJS.NodeJS.LTS -e' } }
 
-    $dbOk = $false
-    try { $tcp = New-Object Net.Sockets.TcpClient; $tcp.Connect('127.0.0.1', 3306); $tcp.Close(); $dbOk = $true } catch { }
-    if ($dbOk) { Ok 'MariaDB (127.0.0.1:3306 응답)' }
+    # DB 포트: .env → .env.example → 3306 (MySQL 과 같이 깔면 MariaDB 가 3307 등 다른 포트를 쓰기도 한다)
+    $envFile = if (Test-Path .env) { '.env' } else { '.env.example' }
+    $dbPort = 3307
+    $pm = Select-String -Path $envFile -Pattern '^DB_PORT=(\d+)' -ErrorAction SilentlyContinue
+    if ($pm) { $dbPort = [int]$pm.Matches[0].Groups[1].Value }
+    function PortOpen([int]$p) { try { $t = New-Object Net.Sockets.TcpClient; $t.Connect('127.0.0.1', $p); $t.Close(); return $true } catch { return $false } }
+
+    if (PortOpen $dbPort) { Ok "MariaDB (127.0.0.1:$dbPort 응답)" }
     else {
-        $svc = Get-Service -Name 'MariaDB*', 'MySQL*' -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($svc) { $missing += @{ name = "MariaDB 서비스 '$($svc.Name)' 가 꺼져 있음"; winget = "관리자 PowerShell 에서: Start-Service $($svc.Name)" } }
+        $svcs = @(Get-Service -Name 'MariaDB*', 'MySQL*' -ErrorAction SilentlyContinue | Sort-Object { $_.Name -notlike 'MariaDB*' })
+        $running = $svcs | Where-Object Status -eq 'Running' | Select-Object -First 1
+        $realPort = $null
+        if ($running) {                          # 켜져 있는데 다른 포트 → 실제 포트를 찾아 .env 의 DB_PORT 를 맞춘다
+            $procId = (Get-CimInstance Win32_Service -Filter "Name='$($running.Name)'" -ErrorAction SilentlyContinue).ProcessId
+            $realPort = Get-NetTCPConnection -State Listen -OwningProcess $procId -ErrorAction SilentlyContinue |
+                Select-Object -ExpandProperty LocalPort -Unique | Where-Object { PortOpen $_ } | Select-Object -First 1
+        }
+        if ($realPort) {
+            if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+            $t = Get-Content .env -Raw -Encoding UTF8
+            if ($t -match '(?m)^DB_PORT=') { $t = $t -replace '(?m)^DB_PORT=.*$', "DB_PORT=$realPort" } else { $t = $t.TrimEnd() + "`r`nDB_PORT=$realPort`r`n" }
+            [IO.File]::WriteAllText((Join-Path $root '.env'), $t, (New-Object Text.UTF8Encoding $false))
+            Ok "MariaDB (서비스 '$($running.Name)' 가 127.0.0.1:$realPort 에서 응답 → .env 의 DB_PORT=$realPort 로 맞춤)"
+        }
+        elseif ($running) { $missing += @{ name = "서비스 '$($running.Name)' 는 켜져 있으나 포트를 못 찾음"; winget = ".env 의 DB_PORT= 를 my.ini 의 port 값으로" } }
+        elseif ($svcs) { $missing += @{ name = "MariaDB 서비스 '$($svcs[0].Name)' 가 꺼져 있음"; winget = "관리자 PowerShell 에서: Start-Service $($svcs[0].Name)" } }
         else { $missing += @{ name = 'MariaDB 10.11 이상 (설치할 때 root 비밀번호를 정한다)'; winget = 'winget install --id MariaDB.Server -e' } }
     }
 
