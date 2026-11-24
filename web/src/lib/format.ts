@@ -38,3 +38,9 @@ export function modelName(kind: string | null | undefined, version: string): str
   const k = kind === "logistic" ? "로지스틱" : kind === "gbm" ? "GBM" : kind ?? "";
   return `${version} · ${k}`;
 }
+
+/** 받침에 맞춘 조사 — josa("여수·고흥", "이", "가") → "여수·고흥이" */
+export function josa(word: string, withBatchim: string, without: string) {
+  const c = word.charCodeAt(word.length - 1) - 0xac00;
+  return word + (c >= 0 && c <= 11171 && c % 28 ? withBatchim : without);
+}

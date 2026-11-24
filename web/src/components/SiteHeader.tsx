@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth";
 const NAV = [
   { href: "/", label: "오늘의 추천" },
   { href: "/record", label: "추천 성적" },
+  { href: "/ask", label: "물어보기" },
   { href: "/status", label: "시스템 상태" },
 ];
 

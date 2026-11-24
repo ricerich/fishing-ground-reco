@@ -8,7 +8,7 @@
   POST /internal/models/reload         챔피언 다시 읽기 (작업 프로세스가 교체 뒤 부른다)
   POST /internal/jobs/{name}           작업 요청 → job_queue (실행은 작업 프로세스)
   GET  /internal/jobs/queue/{id}       요청 상태
-  (4단계) POST /internal/rag/ask · /internal/rag/explain
+  POST /internal/rag/ask · /internal/rag/explain   RAG (NDJSON 스트림) — api/rag_routes.py
 """
 import json
 from contextlib import asynccontextmanager
@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field
 from reco import config as C
 from reco import registry
 from reco.db import connect
+from api import rag_routes
 
 ALLOWED_JOBS = {"collect_daily", "precompute_today", "evaluate_live", "retrain_weekly", "rollback", "rag_reindex"}
 DEMO_JOBS = {"demo_weak_champion"}                    # DEMO_TODAY 일 때만 받는다
@@ -43,7 +44,6 @@ def load_state():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     load_state()
-    from api import rag_routes
     rag_routes.startup(STATE)
     yield
 
@@ -82,7 +82,8 @@ def health():
         ld, STATE["db"] = None, f"error: {type(e).__name__}"
     return {"status": "ok" if STATE.get("db") == "ok" else "degraded", "service": "ai", "today": str(C.today()),
             "demo": bool(C.DEMO_TODAY), "champion": STATE.get("champion"), "champion_kind": STATE.get("champion_kind"),
-            "data_last_day": str(ld) if ld else None, "db": STATE.get("db"), "rag": STATE.get("rag", {"ready": False})}
+            "data_last_day": str(ld) if ld else None, "db": STATE.get("db"),
+            "rag": {**STATE.get("rag", {"ready": False}), "llm_status": rag_routes.llm_status()}}
 
 
 @app.get("/internal/recommend", dependencies=[Depends(internal)])
@@ -100,6 +101,9 @@ def recommend_now(species: str = Query(..., description="고등어 · 방어 · 
     r = res.get((D, species, v), {"items": [], "excluded": [], "candidates": 0})
     return {"species": species, "date": str(D.date()), "model": v, "k": k, "candidates": r["candidates"],
             "items": r["items"][:k], "excluded": r["excluded"]}
+
+
+app.include_router(rag_routes.router(internal))
 
 
 @app.post("/internal/models/reload", dependencies=[Depends(internal)])

@@ -27,6 +27,7 @@ const open = async (p, url) => { await p.goto(url, { waitUntil: "networkidle" })
 const SCENES = {
   2: phase2,
   3: phase3,
+  4: phase4,
   0: [
     ["01", "status", "시스템 상태 — 네 부분이 모두 정상", (p) => open(p, `${WEB}/status`), false, false],
     ["02", "status-raw", "GET /api/health 응답 원문", async (p) => { await open(p, `${WEB}/status`); await p.click("summary"); await wait(p); }, false, true],
@@ -256,6 +257,62 @@ async function phase3(browser, shot) {
   await shot(p, "13", "job-detail", "작업 기록 — 재학습 한 번의 창 · 점수 · 조건이 JSON 으로", { full: true });
   await ctx.close();
   resetDemo();                                       // 다음 수업을 위해 시연 상태를 처음으로
+}
+
+// 4단계: RAG — 근거 설명 · 물어보기. 질문 제한(1분 5번)이 시연 사용자 하나에 걸리므로 순서가 중요하다
+async function waitAnswer(p) {
+  await p.waitForFunction(() => !document.querySelector("[aria-busy=true]"), null, { timeout: 60000 });
+  await wait(p, 600);
+}
+
+async function phase4(browser, shot) {
+  const demoUser = async (pg) => { await open(pg, `${WEB}/login`); await pg.click("text=시연 사용자"); await pg.waitForURL(`${WEB}/`); };
+  const anon = await browser.newContext(PC);
+  const a = await anon.newPage();
+  await open(a, `${WEB}/?species=방어&date=2026-10-15`);
+  await a.locator("button", { hasText: "왜 이 권역인가요?" }).first().click(); await wait(a);
+  await a.locator("section[aria-label$='추천 설명']").scrollIntoViewIfNeeded();
+  await shot(a, "01", "explain-login", "로그인 전 — 설명은 회원 기능");
+  await anon.close();
+
+  const ctx = await browser.newContext({ ...PC, viewport: { width: 1440, height: 1100 } });
+  const p = await ctx.newPage();
+  await demoUser(p);
+  await open(p, `${WEB}/?species=방어&date=2026-10-15`);
+  await p.locator("button", { hasText: "왜 이 권역인가요?" }).first().click();
+  await waitAnswer(p);
+  await shot(p, "02", "explain", "왜 여수·고흥이 1위인가요? — 숫자는 추천 표에서 [추천], 설명은 서비스 문서에서 [번호]", {
+    full: true,
+    mobile: async (m) => {
+      await demoUser(m); await open(m, `${WEB}/?species=방어&date=2026-10-15`);
+      await m.locator("button", { hasText: "왜 이 권역인가요?" }).first().click(); await waitAnswer(m);
+      await m.locator("section[aria-label$='추천 설명']").scrollIntoViewIfNeeded();
+    },
+  });
+  for (const s of await p.locator("section[aria-label$='추천 설명'] summary").all()) await s.click();
+  await wait(p);
+  await p.locator("section[aria-label$='추천 설명']").scrollIntoViewIfNeeded();
+  await shot(p, "03", "explain-facts", "설명에 쓴 숫자(추천 표)와 근거 문서 펼치기 · 답 검사(인용 · 숫자)");
+
+  await open(p, `${WEB}/ask`);
+  await shot(p, "04", "ask-empty", "물어보기 — 예시 질문");
+  const ask = async (q) => { await p.fill("#q", q); await p.click("button[type=submit]"); await wait(p, 400); await waitAnswer(p); };
+  await ask("점수가 0.5면 잡힐 확률이 50%인가요?");
+  await shot(p, "05", "ask-answer", "서비스 문서에서 찾아 답하고, 인용 번호가 근거 목록과 이어진다", { full: true });
+  await ask("고등어 금어기는 언제예요?");
+  await p.locator("ol[aria-label=대화] > li").last().scrollIntoViewIfNeeded();
+  await shot(p, "06", "ask-unknown", "근거 문서에 없으면 — ‘제공된 자료에서 찾을 수 없습니다’");
+  await ask("해파리가 보이면 어떻게 해요?");
+  await p.locator("ol[aria-label=대화] > li").last().locator("summary").click(); await wait(p);
+  await p.locator("ol[aria-label=대화] > li").last().scrollIntoViewIfNeeded();
+  await shot(p, "07", "ask-sample-doc", "수업용 예시 문서를 쓴 답 — 답과 근거 목록에 ‘수업용 예시’ 표시");
+  for (let i = 0; i < 3; i++) {
+    await p.fill("#q", "모델은 언제 바뀌나요?"); await p.click("button[type=submit]"); await wait(p, 300); await waitAnswer(p);
+    if (await p.locator("[role=alert]", { hasText: "1분에" }).count()) break;
+  }
+  await p.evaluate(() => window.scrollTo(0, document.body.scrollHeight)); await wait(p);
+  await shot(p, "08", "ask-limit", "질문 제한 — 1분에 5번 (Spring 이 429)");
+  await ctx.close();
 }
 
 const only = process.argv[2] ?? "all";

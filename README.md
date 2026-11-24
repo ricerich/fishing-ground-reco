@@ -75,5 +75,5 @@ node scripts/capture/capture.mjs all                   # docs/captures/phase<N>/
 | 1 | 추천 미리 계산 · Spring 추천 API · 해도 화면 | 완료 |
 | 2 | 회원: 이메일 인증 · 재설정 · 카카오 · 네이버 · 구글 · 계정 연결 · 관리자 — [안내](docs/guide/02_회원.md) | 완료 |
 | 3 | 수집 · 재학습 · 자동 교체 · 관리자 화면 — [안내](docs/guide/03_수집_재학습_교체.md) | 완료 |
-| 4 | RAG: 추천 근거 설명 · 규정 채팅 | |
+| 4 | RAG: 추천 근거 설명 · 물어보기 — [안내](docs/guide/04_RAG.md) | 완료 |
 | 5 | 추천 성적 · 피드백 · E2E · 통합 점검 | |

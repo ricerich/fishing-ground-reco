@@ -152,13 +152,33 @@ def admin_jobs():
     raise AssertionError("60초 안에 끝나지 않음 — 작업 프로세스(reco.worker)가 떠 있나?")
 
 
+# ── 4단계: RAG ──────────────────────────────────────────────────────
+def rag_explain():
+    """시연 관리자로 '왜 이 권역인가요?' — 스트림이 여러 조각으로 오고, 숫자 · 인용 검사를 통과하고, 기록 번호가 오는가"""
+    s = requests.Session()
+    s.get(f"{WEB}/api/meta", timeout=10)
+    h = lambda: {"X-XSRF-TOKEN": s.cookies.get("XSRF-TOKEN", "")}  # noqa: E731
+    s.post(f"{WEB}/api/auth/demo-login", json={"role": "ADMIN"}, headers=h(), timeout=10)
+    today = s.get(f"{WEB}/api/meta", timeout=10).json()["today"]
+    top = s.get(f"{WEB}/api/recommendations", params={"species": "방어", "date": today}, timeout=10).json()["items"][0]["area"]
+    r = s.post(f"{WEB}/api/rag/explain", json={"species": "방어", "date": today, "area": top}, headers=h(), stream=True, timeout=120)
+    expect(r.status_code == 200, f"{r.status_code} {r.text[:80]}")
+    import json as _j
+    ev = [_j.loads(l) for l in r.iter_lines() if l]
+    kinds = [e["type"] for e in ev]
+    done = next(e for e in ev if e["type"] == "done")
+    expect(kinds.count("delta") > 3 and "logged" in kinds, kinds[:6])
+    expect(done["check"]["numbers_ok"] and done["check"]["cite_ok"], done["check"])
+    return f"{top} 설명 · 조각 {kinds.count('delta')}개 · {done['llm']} · 숫자 · 인용 검사 통과"
+
+
 CHECKS = [
     ("AI 서버 health", ai_health), ("AI 내부 API 는 토큰 필요", ai_token_required), ("Spring health (DB · 뷰 · AI)", api_health),
     ("화면 → Spring 주소 넘김", web_proxy),
     ("오늘 추천 (방어 Top-3)", reco_today), ("추천 응답 속도", reco_fast), ("추천 오류 처리", reco_errors),
     ("미리 계산 = 즉석 계산", reco_same_as_ai), ("보호된 경로", protected),
     ("관리자 경로", admin_guard), ("회원 흐름 (메일 · 소셜 포함)", auth_flow),
-    ("관리자 작업 요청 → 작업 프로세스", admin_jobs),
+    ("관리자 작업 요청 → 작업 프로세스", admin_jobs), ("RAG 근거 설명 (스트림)", rag_explain),
 ]
 
 if __name__ == "__main__":
