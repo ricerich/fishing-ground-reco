@@ -20,7 +20,9 @@ public class AiClient {
     private final boolean tokenSet;
 
     public AiClient(AppProperties props) {
-        var jdk = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
+        // HTTP/1.1 고정: JDK 기본(HTTP/2)은 http:// 에 'Upgrade: h2c' 를 붙이는데, uvicorn 은 그 요청의 본문을 버린다
+        //  → POST 본문이 사라져 "Invalid HTTP request". GET 만 쓰던 1단계에서는 드러나지 않았다
+        var jdk = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).connectTimeout(Duration.ofSeconds(3)).build();
         var factory = new JdkClientHttpRequestFactory(jdk);
         factory.setReadTimeout(Duration.ofSeconds(props.ai().timeoutSeconds()));
         String token = props.ai().internalToken() == null ? "" : props.ai().internalToken();

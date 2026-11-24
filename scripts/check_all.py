@@ -130,12 +130,35 @@ def admin_guard():
     return "로그인 없이 /api/admin 401 (회원은 403 — check_auth)"
 
 
+# ── 3단계: 관리자 · 작업 요청 ────────────────────────────────────────
+def admin_jobs():
+    """시연 관리자로 로그인 → 개요 → 채점 작업 요청(202) → 작업 프로세스가 끝낼 때까지 확인"""
+    s = requests.Session()
+    s.get(f"{WEB}/api/meta", timeout=10)
+    h = lambda: {"X-XSRF-TOKEN": s.cookies.get("XSRF-TOKEN", "")}  # noqa: E731
+    r = s.post(f"{WEB}/api/auth/demo-login", json={"role": "ADMIN"}, headers=h(), timeout=10)
+    expect(r.status_code == 200, f"시연 관리자 로그인 {r.status_code} (demo 프로필인가?)")
+    o = s.get(f"{WEB}/api/admin/overview", timeout=10).json()
+    expect(o.get("champion"), "챔피언 없음")
+    r = s.post(f"{WEB}/api/admin/jobs/evaluate_live", json={}, headers=h(), timeout=10)
+    expect(r.status_code == 202, f"작업 요청 {r.status_code} {r.text[:80]}")
+    qid = r.json()["queue_id"]
+    for _ in range(60):
+        q = s.get(f"{WEB}/api/admin/queue/{qid}", timeout=10).json()
+        if q.get("done"):
+            expect(q.get("runStatus") == "ok", q)
+            return f"챔피언 {o['champion']['version']} · 요청 #{qid} → 작업 #{q['runId']} {q.get('summary', '')[:30]}"
+        time.sleep(1)
+    raise AssertionError("60초 안에 끝나지 않음 — 작업 프로세스(reco.worker)가 떠 있나?")
+
+
 CHECKS = [
     ("AI 서버 health", ai_health), ("AI 내부 API 는 토큰 필요", ai_token_required), ("Spring health (DB · 뷰 · AI)", api_health),
     ("화면 → Spring 주소 넘김", web_proxy),
     ("오늘 추천 (방어 Top-3)", reco_today), ("추천 응답 속도", reco_fast), ("추천 오류 처리", reco_errors),
     ("미리 계산 = 즉석 계산", reco_same_as_ai), ("보호된 경로", protected),
     ("관리자 경로", admin_guard), ("회원 흐름 (메일 · 소셜 포함)", auth_flow),
+    ("관리자 작업 요청 → 작업 프로세스", admin_jobs),
 ]
 
 if __name__ == "__main__":

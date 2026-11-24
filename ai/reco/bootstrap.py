@@ -21,9 +21,13 @@ V1 = "reco_v1"
 
 
 def run(backfill_from="2026-07-01") -> dict:
+    from .collect.common import LOG
+    if C.DEMO_TODAY and LOG.exists():                 # 시연을 처음부터 — 지난 시연의 수집 기록(재생 · 실패 흉내)은 지운다
+        LOG.unlink()
     out = {"load": load_all(verbose=False)}
     with connect() as c, c.cursor() as cur:
-        for t in ("live_eval", "rec_run", "recommendation_excluded", "recommendation", "promotion_log", "model_registry"):
+        for t in ("live_eval", "rec_run", "recommendation_excluded", "recommendation", "promotion_log", "model_registry",
+                  "job_queue", "collect_log"):
             cur.execute(f"DELETE FROM {t}")
         c.commit()
 

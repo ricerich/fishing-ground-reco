@@ -46,7 +46,7 @@ def trainset(ad, stats_until):
 def collect_health(days=7) -> dict:
     """최근 days 일 수집 성공률. 기록이 하나도 없으면(시연 자료만 쓰는 경우) 판단하지 않고 통과로 적는다."""
     with connect() as c, c.cursor() as cur:
-        cur.execute("""SELECT COUNT(*), SUM(status IN ('성공','늘어남','있음')) FROM collect_log
+        cur.execute("""SELECT COUNT(*), SUM(status IN ('성공','늘어남','있음','재생','없음')) FROM collect_log
                        WHERE logged >= NOW() - INTERVAL %s DAY""", (days,))
         n, ok = cur.fetchone()
     n, ok = int(n or 0), int(ok or 0)

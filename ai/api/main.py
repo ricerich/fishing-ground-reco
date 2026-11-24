@@ -27,6 +27,7 @@ from reco import registry
 from reco.db import connect
 
 ALLOWED_JOBS = {"collect_daily", "precompute_today", "evaluate_live", "retrain_weekly", "rollback", "rag_reindex"}
+DEMO_JOBS = {"demo_weak_champion"}                    # DEMO_TODAY 일 때만 받는다
 STATE: dict = {}
 
 
@@ -114,8 +115,9 @@ class JobReq(BaseModel):
 
 @app.post("/internal/jobs/{name}", dependencies=[Depends(internal)], status_code=202)
 def enqueue(name: str, req: JobReq):
-    if name not in ALLOWED_JOBS:
-        raise HTTPException(400, f"요청할 수 있는 작업: {sorted(ALLOWED_JOBS)}")
+    allowed = ALLOWED_JOBS | (DEMO_JOBS if C.DEMO_TODAY else set())
+    if name not in allowed:
+        raise HTTPException(400, f"요청할 수 있는 작업: {sorted(allowed)}")
     if name == "rollback" and not req.params.get("version"):
         raise HTTPException(422, "rollback 에는 params.version 이 필요합니다")
     with connect() as c, c.cursor() as cur:

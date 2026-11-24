@@ -23,7 +23,7 @@ RECO_DB, APP_DB = os.getenv("RECO_DB_NAME", "reco"), os.getenv("APP_DB_NAME", "a
 RECO_USER, APP_USER = os.getenv("RECO_DB_USER", "reco_ai"), os.getenv("APP_DB_USER", "reco_api")
 HOSTS = ["localhost", "127.0.0.1"]
 SVC_VIEWS = ["v_svc_area", "v_svc_rec", "v_svc_excluded", "v_svc_rec_run", "v_svc_live_eval", "v_svc_models",
-             "v_svc_promotions", "v_svc_jobs", "v_svc_collect", "v_svc_queue"]
+             "v_svc_promotions", "v_svc_jobs", "v_svc_collect", "v_svc_queue", "v_svc_collect_log"]
 
 
 def need(name):

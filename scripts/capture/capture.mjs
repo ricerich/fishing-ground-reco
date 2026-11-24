@@ -5,6 +5,7 @@
 // Playwright 가 없으면: npm i -g playwright && npx playwright install chromium
 import { createRequire } from "node:module";
 import { mkdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -25,6 +26,7 @@ const open = async (p, url) => { await p.goto(url, { waitUntil: "networkidle" })
 // 장면: [번호, 이름, 설명, 동작(page), 휴대폰도 찍나, 전체 페이지인가]
 const SCENES = {
   2: phase2,
+  3: phase3,
   0: [
     ["01", "status", "시스템 상태 — 네 부분이 모두 정상", (p) => open(p, `${WEB}/status`), false, false],
     ["02", "status-raw", "GET /api/health 응답 원문", async (p) => { await open(p, `${WEB}/status`); await p.click("summary"); await wait(p); }, false, true],
@@ -182,6 +184,78 @@ async function phase2(browser, shot) {
   });
   await ad.close();
   await ctx.close();
+}
+
+// 3단계: 관리자 — 거절 · (시연) 교체 · 되돌리기 · 수집 실패 → 조건 1 거절. 시작 전에 시연 상태를 처음으로 되돌린다
+function resetDemo() {
+  const py = process.env.PYTHON ?? path.join(ROOT, "ai", process.platform === "win32" ? ".venv/Scripts/python.exe" : ".venv/bin/python");
+  execFileSync(py, ["-m", "reco.jobs", "run", "bootstrap_demo"], { cwd: path.join(ROOT, "ai"), stdio: "ignore" });
+}
+
+async function runJob(p, label) {                  // 버튼 → '끝남' 까지 기다림
+  await p.locator("button", { hasText: label }).first().click();
+  await p.locator("[role=status]", { hasText: /끝남|실패/ }).first().waitFor({ timeout: 120000 });
+  await p.waitForLoadState("networkidle"); await wait(p, 800);
+}
+
+async function phase3(browser, shot) {
+  resetDemo();
+  const ctx = await browser.newContext({ ...PC, viewport: { width: 1440, height: 1000 } });
+  const p = await ctx.newPage();
+  await open(p, `${WEB}/login`); await p.click("text=시연 관리자"); await p.waitForURL(`${WEB}/`);
+
+  await open(p, `${WEB}/admin`);
+  await shot(p, "01", "overview", "관리자 개요 — 챔피언 reco_v1 · 작업 실행 · 교체 기록", {
+    full: true,
+    mobile: async (m) => { await open(m, `${WEB}/login`); await m.click("text=시연 관리자"); await m.waitForURL(`${WEB}/`); await open(m, `${WEB}/admin`); },
+  });
+
+  await open(p, `${WEB}/admin/collect`);
+  await runJob(p, "수집 실행");
+  await shot(p, "02", "collect-ok", "수집 실행 — 출처별 성공률 100% · 한 시도 한 줄", { full: true });
+
+  await open(p, `${WEB}/admin`);
+  await runJob(p, "재학습 · 교체 판단 실행");
+  await p.locator("[role=status]").first().scrollIntoViewIfNeeded();
+  await shot(p, "03", "retrain-reject", "재학습 → 거절 (후보 = 챔피언 수준, 조건 3 미달)");
+  await open(p, `${WEB}/admin/models`);
+  await shot(p, "04", "gates-reject", "거절된 후보의 교체 조건 5개 — 차이 +0.000, 95% 구간이 0 을 품는다", { full: true });
+
+  await open(p, `${WEB}/admin`);
+  await runJob(p, "시연: 약한 챔피언 실행");
+  await shot(p, "05", "scenario-weak", "시연 시나리오 — 바다 관측만 쓰는 reco_v0_sea 를 챔피언으로", { full: true });
+  await open(p, `${WEB}/?species=방어&date=2026-10-15`);
+  await shot(p, "06", "home-weak", "약한 모델이 서비스 중인 첫 화면 — 아래 설명에 모델 이름이 그대로 보인다", { full: true });
+
+  await open(p, `${WEB}/admin`);
+  await runJob(p, "재학습 · 교체 판단 실행");
+  await p.locator("[role=status]").first().scrollIntoViewIfNeeded();
+  await shot(p, "07", "retrain-promote", "재학습 → 교체 (조건 5개 통과, 오늘 추천 다시 계산)");
+  await open(p, `${WEB}/admin/models`);
+  await shot(p, "08", "gates-promote", "교체된 후보 — 5개 모두 ✓, 차이 +0.18 [+0.13, +0.24]", { full: true });
+
+  await open(p, `${WEB}/admin/models?v=reco_v1`);
+  await runJob(p, "reco_v1 로 되돌리기");
+  await shot(p, "09", "rollback", "되돌리기 — 관리자가 reco_v1 을 다시 챔피언으로 (조건을 거치지 않음, 기록에 남음)", { full: true });
+
+  await open(p, `${WEB}/admin/collect`);
+  await p.selectOption("select", "30");
+  await runJob(p, "수집 실행");
+  await shot(p, "10", "collect-fail", "시연: 관측 30% 실패 → 성공률이 95% 아래로", { full: true });
+  await p.check("text=실패만"); await p.waitForLoadState("networkidle"); await wait(p);
+  await p.locator("section", { hasText: "수집 기록" }).scrollIntoViewIfNeeded();
+  await shot(p, "11", "collect-fail-log", "실패만 보기 — 무엇이 · 왜 실패했는지");
+
+  await open(p, `${WEB}/admin`);
+  await runJob(p, "재학습 · 교체 판단 실행");
+  await open(p, `${WEB}/admin/models`);
+  await shot(p, "12", "gates-data", "수집이 불안하면 조건 1(데이터 상태)에서 먼저 거절", { full: true });
+
+  const runId = await p.evaluate(async () => (await (await fetch("/api/admin/jobs?job=retrain_weekly&limit=1")).json())[0].runId);
+  await open(p, `${WEB}/admin/jobs?run=${runId}`);
+  await shot(p, "13", "job-detail", "작업 기록 — 재학습 한 번의 창 · 점수 · 조건이 JSON 으로", { full: true });
+  await ctx.close();
+  resetDemo();                                       // 다음 수업을 위해 시연 상태를 처음으로
 }
 
 const only = process.argv[2] ?? "all";

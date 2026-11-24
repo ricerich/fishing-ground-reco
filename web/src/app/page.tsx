@@ -58,7 +58,7 @@ function ModelNote({ rec }: { rec: Recommendation }) {
       {r && r.days ? (
         <p className="text-ink-2">
           최근 {r.weeks}주 중 결과가 확정된 {r.days}일, Top-3 가운데 실제로 평소보다 잘 잡힌 권역의 비율은
-          <span className="num font-semibold text-ink"> 이 모델 {pct(r.served)}</span>,
+          <span className="num font-semibold text-ink"> 그동안 보여 드린 추천 {pct(r.served)}</span>,
           <span className="num"> 규칙(어제 좋았던 곳) {pct(r.rule)}</span>,
           <span className="num"> 무작위로 골랐다면 {pct(r.random)}</span>였습니다.
         </p>

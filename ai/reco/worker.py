@@ -58,7 +58,7 @@ def poll_queue():
         if cur.rowcount == 0:
             return
     kw = json.loads(params) if params else {}
-    if name in ("retrain_weekly", "rollback"):
+    if name in ("retrain_weekly", "rollback", "demo_weak_champion"):
         kw.setdefault("actor", f"admin:{who}")
     out = safe_run(name, f"admin:{who}", **kw)
     with connect() as c, c.cursor() as cur:

@@ -60,10 +60,10 @@ def run(name, trigger="cli", **kw) -> dict:
 
 # ── 작업들 ─────────────────────────────────────────────────────────
 
-@job("collect_daily", "위판(최근 7일 다시) · 권역 관측 14곳 · 낚시지수 · 해상예보 수집 → DB 적재")
-def collect_daily(days=None):
+@job("collect_daily", "위판(최근 7일 다시) · 권역 관측 14곳 · 낚시지수 · 해상예보 수집 → DB 적재 (시연: 받아 둔 원본 재생)")
+def collect_daily(days=None, simulate_fail=0):
     from . import collect_all
-    return collect_all.run(days=days)
+    return collect_all.run(days=days, simulate_fail=simulate_fail)
 
 
 @job("precompute_today", "오늘(DEMO_TODAY 또는 실제 오늘) 추천을 챔피언 · 규칙으로 계산해 저장")
@@ -112,6 +112,14 @@ def rollback(version, actor="admin"):
     return {"from": prev, "to": version, "_summary": f"{prev} → {version} (되돌리기)"}
 
 
+@job("demo_weak_champion", "시연 시나리오 — 바다 관측만 쓰는 약한 모델을 챔피언으로 (교체 장면 실습, DEMO_TODAY 일 때만)")
+def demo_weak_champion(actor="scenario"):
+    from . import scenario
+    out = scenario.weak_champion(actor=actor)
+    _reload_api()
+    return out
+
+
 @job("bootstrap_demo", "시연 자료 적재 → reco_v1(P6 방식) 챔피언 등록 → 7/1 ~ 오늘 추천 채우기 → 성적 채점")
 def bootstrap_demo(backfill_from="2026-07-01"):
     from . import bootstrap
@@ -150,6 +158,7 @@ def main(argv=None):
     r.add_argument("--end")
     r.add_argument("--version")
     r.add_argument("--dry-run", action="store_true")
+    r.add_argument("--simulate-fail", type=int, help="collect_daily 시연: 관측 대상의 n%% 를 실패로")
     a = ap.parse_args(argv)
     if a.cmd == "list":
         for k, v in JOBS.items():
@@ -164,6 +173,8 @@ def main(argv=None):
         kw["start"], kw["end"] = a.start, a.end
     if a.version:
         kw["version"] = a.version
+    if a.simulate_fail:
+        kw["simulate_fail"] = a.simulate_fail
     if a.dry_run:
         kw["dry_run"] = True
     out = run(a.name, trigger="cli", **kw)
